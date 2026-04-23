@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Technique — Depense App</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue-dark: #1A3C6B;
+    --blue-mid: #2E75B6;
+    --blue-light: #D5E8F0;
+    --blue-pale: #EEF4FB;
+    --green-dark: #1D5C2E;
+    --green-light: #E2F0D9;
+    --amber-dark: #7F4F00;
+    --amber-light: #FFF2CC;
+    --red-dark: #7B2020;
+    --red-light: #FCE4D6;
+    --gray-text: #444;
+    --gray-light: #F5F5F5;
+    --gray-border: #CCC;
+    --white: #FFF;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; line-height: 1.6; color: var(--gray-text);
+    background: #F2F4F7; padding: 0;
+  }
+  /* ── Nav ── */
+  .top-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--white); border-bottom: 1px solid var(--blue-light);
+    padding: 10px 32px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .nav-label { font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+  .nav-btn {
+    padding: 4px 12px; font-size: 11px; border-radius: 6px;
+    border: 1px solid #ddd; background: var(--white); color: #555; cursor: pointer;
+  }
+  .nav-btn:hover { background: var(--blue-pale); border-color: var(--blue-mid); color: var(--blue-dark); }
+  /* ── Page ── */
+  .page {
+    max-width: 960px; margin: 32px auto; background: var(--white);
+    border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,.07);
+    overflow: hidden;
+  }
+  .page-header-bar {
+    background: var(--blue-dark); color: var(--white);
+    padding: 10px 32px; display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px;
+  }
+  .page-header-bar .left { font-weight: 600; color: #9EC5E8; }
+  .page-header-bar .right { color: #7AABD4; }
+  .page-body { padding: 40px 48px 48px; }
+  .page-footer {
+    border-top: 2px solid var(--blue-light); padding: 10px 48px;
+    font-size: 11px; color: #999; font-style: italic;
+  }
+  /* ── Cover ── */
+  .cover { text-align: center; padding: 64px 48px 56px; }
+  .cover .kicker { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-mid); margin-bottom: 14px; }
+  .cover h1 { font-size: 36px; font-weight: 700; color: var(--blue-dark); line-height: 1.2; margin-bottom: 8px; }
+  .cover .sub { font-size: 14px; color: #888; margin-bottom: 40px; font-style: italic; }
+  .meta-table { width: 100%; max-width: 520px; margin: 0 auto; border-collapse: collapse; font-size: 13px; }
+  .meta-table td { padding: 9px 14px; border: 1px solid #E5EDF5; }
+  .meta-table td:first-child { background: var(--blue-pale); font-weight: 600; color: var(--blue-dark); width: 140px; }
+  /* ── Headings ── */
+  h1.sec {
+    font-size: 20px; font-weight: 700; color: var(--blue-dark);
+    border-bottom: 3px solid var(--blue-mid); padding-bottom: 8px;
+    margin: 48px 0 20px;
+  }
+  h1.sec:first-child { margin-top: 0; }
+  h2.sec { font-size: 15px; font-weight: 700; color: var(--blue-mid); margin: 32px 0 12px; }
+  h3.sec { font-size: 13px; font-weight: 700; color: var(--blue-dark); margin: 24px 0 10px; }
+  p { margin-bottom: 12px; color: var(--gray-text); line-height: 1.7; }
+  /* ── Architecture diagram ── */
+  .arch-diagram {
+    border: 2px solid var(--blue-mid); border-radius: 10px;
+    background: #F4F7FB; padding: 28px 24px; margin: 16px 0 24px;
+  }
+  .arch-layer {
+    border: 1.5px solid var(--blue-light); border-radius: 8px; background: var(--white);
+    padding: 14px 18px; margin-bottom: 0; text-align: center;
+  }
+  .arch-layer .layer-title { font-size: 13px; font-weight: 700; color: var(--blue-dark); margin-bottom: 4px; }
+  .arch-layer .layer-tech { font-family: 'Courier New', monospace; font-size: 11px; color: #666; }
+  .arch-arrow {
+    text-align: center; font-size: 13px; color: var(--blue-mid);
+    font-weight: 600; padding: 6px 0; font-style: italic;
+  }
+  .arch-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 0; }
+  .arch-box {
+    border: 1.5px solid var(--blue-mid); border-radius: 8px;
+    padding: 12px; text-align: center;
+  }
+  .arch-box .box-title { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .arch-box .box-sub { font-size: 11px; color: #666; }
+  .arch-box.blue { background: var(--blue-pale); }
+  .arch-box.blue .box-title { color: var(--blue-dark); }
+  .arch-box.green { background: var(--green-light); }
+  .arch-box.green .box-title { color: var(--green-dark); }
+  .arch-box.amber { background: var(--amber-light); }
+  .arch-box.amber .box-title { color: var(--amber-dark); }
+  /* ── Tables ── */
+  table.doc { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 12px 0 24px; }
+  table.doc th {
+    background: var(--blue-dark); color: var(--white); font-weight: 600;
+    padding: 9px 12px; text-align: left; font-size: 11px; letter-spacing: .03em;
+  }
+  table.doc td { padding: 8px 12px; border: 1px solid #E0E0E0; vertical-align: top; line-height: 1.5; }
+  table.doc tr:nth-child(even) td { background: var(--gray-light); }
+  table.doc td.key { font-weight: 600; color: var(--blue-dark); background: var(--blue-pale) !important; white-space: nowrap; }
+  table.doc td.mono { font-family: 'Courier New', monospace; font-size: 11.5px; color: var(--blue-mid); }
+  table.doc td.muted { color: #888; }
+  /* ── Code blocks ── */
+  pre {
+    background: #F0F4FA; border: 1px solid var(--blue-light); border-left: 4px solid var(--blue-mid);
+    border-radius: 6px; padding: 16px 20px; font-family: 'Courier New', monospace;
+    font-size: 12px; color: var(--blue-dark); line-height: 1.7; overflow-x: auto;
+    margin: 12px 0 24px; white-space: pre;
+  }
+  /* ── Callouts ── */
+  .callout {
+    border-left: 4px solid var(--blue-mid); background: var(--blue-pale);
+    border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 16px 0 24px;
+  }
+  .callout.amber { border-color: var(--amber-dark); background: var(--amber-light); }
+  .callout.green { border-color: var(--green-dark); background: var(--green-light); }
+  .callout .callout-title { font-weight: 700; font-size: 12px; color: var(--blue-mid); margin-bottom: 6px; }
+  .callout.amber .callout-title { color: var(--amber-dark); }
+  .callout.green .callout-title { color: var(--green-dark); }
+  .callout p { margin: 0; font-size: 12.5px; line-height: 1.6; }
+  /* ── Flow steps ── */
+  .flow-steps { border-collapse: collapse; width: 100%; font-size: 12.5px; margin: 12px 0 24px; }
+  .flow-steps th { background: var(--blue-dark); color: #fff; padding: 8px 12px; font-size: 11px; font-weight: 600; text-align: left; }
+  .flow-steps td { padding: 8px 12px; border: 1px solid #E0E0E0; vertical-align: top; }
+  .flow-steps tr:nth-child(even) td { background: var(--gray-light); }
+  .flow-steps .step-num { font-weight: 700; color: var(--blue-mid); text-align: center; width: 36px; }
+  .flow-steps .step-actor { font-weight: 600; width: 130px; }
+  .flow-steps .step-detail { color: #777; font-size: 11.5px; }
+  /* ── State diagram ── */
+  .state-diagram {
+    border: 2px solid var(--blue-mid); border-radius: 10px;
+    background: #F4F7FB; padding: 24px; margin: 12px 0 24px;
+  }
+  .state-box {
+    border-radius: 8px; padding: 12px 20px; text-align: center; margin: 0 auto 4px;
+    max-width: 420px; font-weight: 700; font-size: 13px;
+  }
+  .state-box.active { background: var(--green-light); color: var(--green-dark); border: 2px solid #7DC47D; }
+  .state-box.paused { background: var(--amber-light); color: var(--amber-dark); border: 2px solid #F0B93B; }
+  .state-box.ended { background: var(--red-light); color: var(--red-dark); border: 2px solid #E07070; }
+  .state-box.init { background: #F0F0F0; color: #555; border: 2px solid #BBB; }
+  .state-arrow { text-align: center; color: var(--blue-mid); font-size: 12px; padding: 4px 0; font-style: italic; }
+  /* ── HR ── */
+  hr { border: none; border-top: 1px solid var(--blue-light); margin: 32px 0; }
+  /* ── Section divider ── */
+  .section-end { text-align: center; font-size: 12px; color: #BBB; font-style: italic; padding: 24px 0 0; border-top: 1px solid #EEE; margin-top: 32px; }
+  ul.doc { padding-left: 20px; margin: 8px 0 16px; }
+  ul.doc li { margin-bottom: 5px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────────────────── -->
+<nav class="top-nav">
+  <span class="nav-label">Section</span>
+  <button class="nav-btn" onclick="scrollTo('s1')">1. Architecture</button>
+  <button class="nav-btn" onclick="scrollTo('s2')">2. Flux de données</button>
+  <button class="nav-btn" onclick="scrollTo('s3')">3. Modèle de données</button>
+  <button class="nav-btn" onclick="scrollTo('s4')">4. Diagrammes d'états</button>
+  <button class="nav-btn" onclick="scrollTo('s5')">5. Choix techniques</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     PAGE DE COUVERTURE
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header-bar">
+    <span class="left">Architecture Technique — Depense App</span>
+    <span class="right">Version 1.0 · Avril 2026</span>
+  </div>
+  <div class="cover">
+    <div class="kicker">Document d'architecture technique</div>
+    <h1>Application de Suivi<br>des Dépenses</h1>
+    <div class="sub">Architecture de haut niveau — Version 1.0</div>
+    <table class="meta-table">
+      <tr><td>Projet</td><td>Application Web Depense — Suivi des dépenses personnelles</td></tr>
+      <tr><td>Version</td><td>1.0 — Architecture initiale</td></tr>
+      <tr><td>Date</td><td>Avril 2026</td></tr>
+      <tr><td>Stack</td><td>React · FastAPI (Python) · PostgreSQL · Docker Compose</td></tr>
+      <tr><td>Statut</td><td>En revue</td></tr>
+    </table>
+  </div>
+  <div class="page-footer">Confidentiel — Document d'architecture de haut niveau</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     1. ARCHITECTURE GLOBALE
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="s1">
+  <div class="page-header-bar">
+    <span class="left">Architecture Technique — Depense App</span>
+    <span class="right">Version 1.0 · Avril 2026</span>
+  </div>
+  <div class="page-body">
+
+    <h1 class="sec">1. Architecture globale</h1>
+    <p>L'application repose sur une architecture trois-tiers classique, orchestrée localement via Docker Compose. Chaque couche est isolée dans son propre conteneur, communique via un réseau Docker interne, et est indépendamment scalable en production.</p>
+
+    <div class="arch-diagram">
+      <div class="arch-layer">
+        <div class="layer-title">NAVIGATEUR WEB — Client React</div>
+        <div class="layer-tech">React 18 &nbsp;·&nbsp; React Query &nbsp;·&nbsp; Recharts &nbsp;·&nbsp; Axios &nbsp;·&nbsp; Zod</div>
+      </div>
+      <div class="arch-arrow">▼ &nbsp; HTTPS / REST &nbsp; ▼</div>
+      <div class="arch-layer">
+        <div class="layer-title">API GATEWAY — Nginx (reverse proxy)</div>
+        <div class="layer-tech">Routage &nbsp;·&nbsp; TLS termination &nbsp;·&nbsp; Rate limiting &nbsp;·&nbsp; CORS headers</div>
+      </div>
+      <div class="arch-arrow">▼ &nbsp; HTTP interne &nbsp; ▼</div>
+      <div class="arch-layer">
+        <div class="layer-title">BACKEND — FastAPI (Python 3.12)</div>
+        <div class="layer-tech">Pydantic &nbsp;·&nbsp; SQLAlchemy 2 async &nbsp;·&nbsp; Alembic &nbsp;·&nbsp; Celery Worker &nbsp;·&nbsp; JWT RS256</div>
+      </div>
+      <div class="arch-arrow">▼ asyncpg / SQLAlchemy &nbsp;&nbsp;&nbsp; ▼ Redis pub/sub (Celery) &nbsp;&nbsp;&nbsp; ▼ HTTP (Frankfurter, SMTP)</div>
+      <div class="arch-bottom">
+        <div class="arch-box blue">
+          <div class="box-title">PostgreSQL 16</div>
+          <div class="box-sub">Base de données principale</div>
+        </div>
+        <div class="arch-box green">
+          <div class="box-title">Redis 7</div>
+          <div class="box-sub">Cache applicatif + Broker Celery</div>
+        </div>
+        <div class="arch-box amber">
+          <div class="box-title">Services externes</div>
+          <div class="box-sub">Frankfurter API (taux) · SMTP (e-mails)</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">1.1 Conteneurs Docker Compose</h2>
+    <table class="doc">
+      <thead><tr><th>Service</th><th>Image</th><th>Port (local)</th><th>Rôle</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">frontend</td><td class="mono">node:20-alpine</td><td>3000</td><td>Serveur de dev Vite.js (React)</td></tr>
+        <tr><td class="key mono">nginx</td><td class="mono">nginx:alpine</td><td>80 / 443</td><td>Reverse proxy — sert le build React en prod</td></tr>
+        <tr><td class="key mono">backend</td><td class="mono">python:3.12-slim</td><td>8000</td><td>API FastAPI — serveur ASGI Uvicorn</td></tr>
+        <tr><td class="key mono">worker</td><td class="mono">python:3.12-slim</td><td>—</td><td>Celery — tâches asynchrones (emails, taux de change)</td></tr>
+        <tr><td class="key mono">db</td><td class="mono">postgres:16-alpine</td><td>5432</td><td>Base de données principale</td></tr>
+        <tr><td class="key mono">redis</td><td class="mono">redis:7-alpine</td><td>6379</td><td>Broker Celery + cache taux de change</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout green">
+      <div class="callout-title">Réseau Docker interne</div>
+      <p>Tous les conteneurs communiquent via un bridge network <code>depense_net</code>. Seuls Nginx (80/443) et optionnellement PostgreSQL (5432 en dev) exposent des ports sur l'hôte. Le backend et Redis ne sont jamais exposés directement.</p>
+    </div>
+
+  </div>
+  <div class="page-footer">Confidentiel — Document d'architecture de haut niveau</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     2. FLUX DE DONNÉES
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="s2">
+  <div class="page-header-bar">
+    <span class="left">Architecture Technique — Depense App</span>
+    <span class="right">Version 1.0 · Avril 2026</span>
+  </div>
+  <div class="page-body">
+
+    <h1 class="sec">2. Flux de données principaux</h1>
+
+    <h2 class="sec">2.1 Ajout d'une dépense</h2>
+    <p>Ce flux couvre la création d'une dépense, avec détection de dépassement de budget et envoi d'alerte e-mail asynchrone via Celery.</p>
+
+    <table class="flow-steps">
+      <thead><tr><th style="width:36px">#</th><th style="width:130px">Acteur</th><th>Action</th><th>Composant</th><th>Détail</th></tr></thead>
+      <tbody>
+        <tr><td class="step-num">1</td><td class="step-actor">Utilisateur</td><td>Soumet le formulaire</td><td>React (FormData)</td><td class="step-detail">Validation Zod côté client</td></tr>
+        <tr><td class="step-num">2</td><td class="step-actor">React</td><td>POST /api/v1/expenses</td><td>Axios → Nginx → FastAPI</td><td class="step-detail">JWT dans le header Authorization</td></tr>
+        <tr><td class="step-num">3</td><td class="step-actor">FastAPI</td><td>Valide le payload</td><td>Pydantic schema</td><td class="step-detail">Type, montant &gt; 0, devise valide (ISO 4217)</td></tr>
+        <tr><td class="step-num">4</td><td class="step-actor">FastAPI</td><td>Récupère le taux de change</td><td>Service exchange_rate</td><td class="step-detail">Lecture cache Redis (TTL 1h) → Frankfurter API si absent</td></tr>
+        <tr><td class="step-num">5</td><td class="step-actor">FastAPI</td><td>Persiste la dépense</td><td>SQLAlchemy → PostgreSQL</td><td class="step-detail">INSERT expenses + amount_ref + exchange_rate appliqué</td></tr>
+        <tr><td class="step-num">6</td><td class="step-actor">FastAPI</td><td>Vérifie le budget</td><td>Service budget_checker</td><td class="step-detail">SELECT SUM(amount_ref) vs budgets.amount pour le mois en cours</td></tr>
+        <tr><td class="step-num">7</td><td class="step-actor">FastAPI</td><td>Publie tâche async si dépassé</td><td>Celery (via Redis)</td><td class="step-detail">Task send_budget_alert_email — non bloquant</td></tr>
+        <tr><td class="step-num">8</td><td class="step-actor">Celery Worker</td><td>Envoie l'e-mail d'alerte</td><td>SMTP (smtplib)</td><td class="step-detail">Template HTML Jinja2 avec récap budget</td></tr>
+        <tr><td class="step-num">9</td><td class="step-actor">FastAPI</td><td>Retourne 201 Created</td><td>JSON Response</td><td class="step-detail">Objet dépense créé + montant converti en devise de réf.</td></tr>
+        <tr><td class="step-num">10</td><td class="step-actor">React Query</td><td>Invalide le cache dashboard</td><td>queryClient.invalidateQueries</td><td class="step-detail">Rafraîchissement automatique du tableau de bord</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">2.2 Consultation du tableau de bord</h2>
+    <p>Ce flux illustre la stratégie de cache à deux niveaux : React Query côté client (stale-while-revalidate) et Redis côté serveur (TTL 5 min par utilisateur et période).</p>
+
+    <table class="flow-steps">
+      <thead><tr><th style="width:36px">#</th><th style="width:130px">Acteur</th><th>Action</th><th>Composant</th><th>Détail</th></tr></thead>
+      <tbody>
+        <tr><td class="step-num">1</td><td class="step-actor">React</td><td>Charge le dashboard</td><td>React Query useQuery()</td><td class="step-detail">Stale-while-revalidate 60s côté client</td></tr>
+        <tr><td class="step-num">2</td><td class="step-actor">React</td><td>GET /api/v1/dashboard</td><td>Axios → Nginx → FastAPI</td><td class="step-detail">Params : period (M/Q/Y/custom), currency</td></tr>
+        <tr><td class="step-num">3</td><td class="step-actor">FastAPI</td><td>Vérifie le cache Redis</td><td>Redis GET dashboard:{uid}:{period}</td><td class="step-detail">Clé composite user_id + période + devise</td></tr>
+        <tr><td class="step-num">4a</td><td class="step-actor">Redis (hit)</td><td>Retourne les agrégats JSON</td><td>Cache hit → réponse directe</td><td class="step-detail">Latence &lt; 5 ms — chemin nominal</td></tr>
+        <tr><td class="step-num">4b</td><td class="step-actor">FastAPI</td><td>Exécute les requêtes SQL</td><td>SQLAlchemy async</td><td class="step-detail">GROUP BY category, SUM, AVG, COUNT — window functions</td></tr>
+        <tr><td class="step-num">5</td><td class="step-actor">PostgreSQL</td><td>Retourne les agrégats</td><td>Window functions</td><td class="step-detail">Comparaison automatique avec la période précédente</td></tr>
+        <tr><td class="step-num">6</td><td class="step-actor">FastAPI</td><td>Convertit en devise de réf.</td><td>Service exchange_rate</td><td class="step-detail">Taux depuis Redis (TTL 1h)</td></tr>
+        <tr><td class="step-num">7</td><td class="step-actor">FastAPI</td><td>Stocke en cache Redis</td><td>Redis SETEX 300</td><td class="step-detail">Sérialisation JSON, TTL 5 min</td></tr>
+        <tr><td class="step-num">8</td><td class="step-actor">FastAPI</td><td>Retourne 200 OK</td><td>JSON Response</td><td class="step-detail">Métriques + séries temporelles</td></tr>
+        <tr><td class="step-num">9</td><td class="step-actor">React</td><td>Rend les graphiques</td><td>Recharts components</td><td class="step-detail">Camembert, histogramme, jauges budget</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">2.3 Authentification (JWT RS256)</h2>
+
+<pre>1. POST /api/v1/auth/login  { email, password }
+       └─ FastAPI vérifie le hash bcrypt (cost 12) en base
+       └─ Génère access_token  (JWT RS256, TTL 15 min)
+       └─ Génère refresh_token (JWT RS256, TTL 7 jours)
+       └─ refresh_token persisté en base (table refresh_tokens, hash SHA-256)
+
+2. Stockage côté client
+       access_token  → mémoire JavaScript (variable d'état, non persisté)
+       refresh_token → cookie HttpOnly Secure SameSite=Strict
+
+3. Requêtes authentifiées
+       Authorization: Bearer &lt;access_token&gt;
+       FastAPI middleware : décode JWT, injecte user_id dans request.state
+
+4. Renouvellement
+       À expiration de l'access_token : POST /api/v1/auth/refresh
+       → nouveau access_token si refresh_token valide
+       → 401 Unauthorized + redirect login si refresh_token expiré/révoqué
+
+5. Déconnexion
+       POST /api/v1/auth/logout
+       → refresh_token marqué revoked_at en base
+       → client efface l'access_token de la mémoire</pre>
+
+  </div>
+  <div class="page-footer">Confidentiel — Document d'architecture de haut niveau</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     3. MODÈLE DE DONNÉES
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="s3">
+  <div class="page-header-bar">
+    <span class="left">Architecture Technique — Depense App</span>
+    <span class="right">Version 1.0 · Avril 2026</span>
+  </div>
+  <div class="page-body">
+
+    <h1 class="sec">3. Modèle de données</h1>
+    <p>Isolation <strong>logique</strong> des données : toutes les tables métier contiennent une clé étrangère <code>user_id</code>. Le middleware FastAPI injecte systématiquement l'identité depuis le token JWT — jamais depuis le corps de la requête.</p>
+
+    <h2 class="sec">3.1 Entités principales</h2>
+
+    <h3 class="sec">Table : users</h3>
+    <table class="doc">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">id</td><td>UUID</td><td>PK</td><td>Identifiant unique (uuid4)</td></tr>
+        <tr><td class="key mono">email</td><td>VARCHAR(255)</td><td>UNIQUE NOT NULL</td><td>Adresse e-mail de connexion</td></tr>
+        <tr><td class="key mono">password_hash</td><td>VARCHAR(255)</td><td>NOT NULL</td><td>Hash bcrypt (cost factor 12)</td></tr>
+        <tr><td class="key mono">full_name</td><td>VARCHAR(100)</td><td></td><td>Nom d'affichage</td></tr>
+        <tr><td class="key mono">reference_currency</td><td>CHAR(3)</td><td>DEFAULT 'EUR'</td><td>Devise de référence (ISO 4217)</td></tr>
+        <tr><td class="key mono">is_active</td><td>BOOLEAN</td><td>DEFAULT true</td><td>Compte actif / désactivé</td></tr>
+        <tr><td class="key mono">created_at</td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td>Date de création (UTC)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Table : categories</h3>
+    <table class="doc">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">id</td><td>UUID</td><td>PK</td><td>Identifiant unique</td></tr>
+        <tr><td class="key mono">user_id</td><td>UUID</td><td>FK users(id) NULL</td><td>NULL = catégorie système partagée par tous</td></tr>
+        <tr><td class="key mono">name</td><td>VARCHAR(80)</td><td>NOT NULL</td><td>Libellé de la catégorie</td></tr>
+        <tr><td class="key mono">emoji</td><td>VARCHAR(10)</td><td></td><td>Icône emoji associée</td></tr>
+        <tr><td class="key mono">is_default</td><td>BOOLEAN</td><td>DEFAULT false</td><td>Catégorie système — non supprimable</td></tr>
+        <tr><td class="key mono">color_hex</td><td>CHAR(7)</td><td></td><td>Couleur d'affichage (#RRGGBB)</td></tr>
+        <tr><td class="key mono">created_at</td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td>Date de création</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Table : expenses</h3>
+    <table class="doc">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">id</td><td>UUID</td><td>PK</td><td>Identifiant unique</td></tr>
+        <tr><td class="key mono">user_id</td><td>UUID</td><td>FK users(id)</td><td>Propriétaire de la dépense</td></tr>
+        <tr><td class="key mono">category_id</td><td>UUID</td><td>FK categories(id)</td><td>Catégorie associée (obligatoire)</td></tr>
+        <tr><td class="key mono">title</td><td>VARCHAR(200)</td><td>NOT NULL</td><td>Libellé de la dépense</td></tr>
+        <tr><td class="key mono">amount</td><td>NUMERIC(12,2)</td><td>CHECK &gt; 0</td><td>Montant dans la devise saisie</td></tr>
+        <tr><td class="key mono">currency</td><td>CHAR(3)</td><td>NOT NULL</td><td>Devise ISO 4217 (ex. EUR, USD)</td></tr>
+        <tr><td class="key mono">amount_ref</td><td>NUMERIC(12,2)</td><td></td><td>Montant converti en devise de référence</td></tr>
+        <tr><td class="key mono">exchange_rate</td><td>NUMERIC(10,6)</td><td></td><td>Taux appliqué lors de la saisie (traçabilité)</td></tr>
+        <tr><td class="key mono">spent_at</td><td>DATE</td><td>NOT NULL</td><td>Date de la dépense (pas de timestamp)</td></tr>
+        <tr><td class="key mono">recurrence_id</td><td>UUID</td><td>FK recurrences(id) NULL</td><td>Lien vers la série récurrente</td></tr>
+        <tr><td class="key mono">notes</td><td>TEXT</td><td></td><td>Notes libres (optionnel)</td></tr>
+        <tr><td class="key mono">created_at</td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td>Date de création de l'enregistrement</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Table : recurrences</h3>
+    <table class="doc">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">id</td><td>UUID</td><td>PK</td><td>Identifiant de la série</td></tr>
+        <tr><td class="key mono">user_id</td><td>UUID</td><td>FK users(id)</td><td>Propriétaire</td></tr>
+        <tr><td class="key mono">frequency</td><td>ENUM</td><td>NOT NULL</td><td>daily | weekly | monthly | yearly</td></tr>
+        <tr><td class="key mono">next_due_at</td><td>DATE</td><td>NOT NULL</td><td>Date de prochaine génération par Celery beat</td></tr>
+        <tr><td class="key mono">is_active</td><td>BOOLEAN</td><td>DEFAULT true</td><td>Série active ou suspendue</td></tr>
+        <tr><td class="key mono">ends_at</td><td>DATE</td><td>NULL</td><td>Date de fin (NULL = indéfini)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Table : budgets</h3>
+    <table class="doc">
+      <thead><tr><th>Colonne</th><th>Type</th><th>Contrainte</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">id</td><td>UUID</td><td>PK</td><td>Identifiant</td></tr>
+        <tr><td class="key mono">user_id</td><td>UUID</td><td>FK users(id)</td><td>Propriétaire</td></tr>
+        <tr><td class="key mono">category_id</td><td>UUID</td><td>FK categories NULL</td><td>NULL = budget global mensuel</td></tr>
+        <tr><td class="key mono">amount</td><td>NUMERIC(12,2)</td><td>CHECK &gt; 0</td><td>Montant du budget</td></tr>
+        <tr><td class="key mono">currency</td><td>CHAR(3)</td><td>NOT NULL</td><td>Devise du budget (converti en devise réf. pour comparaison)</td></tr>
+        <tr><td class="key mono">period</td><td>ENUM</td><td>NOT NULL</td><td>monthly (V1 uniquement)</td></tr>
+        <tr><td class="key mono">alert_at_80</td><td>BOOLEAN</td><td>DEFAULT true</td><td>Alerte e-mail à 80% de consommation</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Tables auxiliaires</h3>
+    <table class="doc">
+      <thead><tr><th>Table</th><th>Colonnes clés et rôle</th></tr></thead>
+      <tbody>
+        <tr><td class="key mono">refresh_tokens</td><td>id, user_id, token_hash (SHA-256), expires_at, revoked_at — gestion des sessions longues durée</td></tr>
+        <tr><td class="key mono">exchange_rate_cache</td><td>currency_pair, rate, fetched_at — historique des taux appliqués (traçabilité réglementaire)</td></tr>
+        <tr><td class="key mono">audit_log</td><td>id, user_id, action, entity_type, entity_id, timestamp — traçabilité de toutes les opérations</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">3.2 Relations entre entités</h2>
+<pre>users (1) ────► categories  (N)   user_id FK
+users (1) ────► expenses    (N)   user_id FK
+users (1) ────► budgets     (N)   user_id FK
+users (1) ────► recurrences (N)   user_id FK
+
+categories (1) ──► expenses  (N)   category_id FK
+categories (1) ──► budgets   (N)   category_id FK (nullable → budget global)
+
+recurrences (1) ─► expenses  (N)   recurrence_id FK (nullable → dépense ponctuelle)</pre>
+
+    <div class="callout">
+      <div class="callout-title">Index clés PostgreSQL</div>
+      <p>
+        <code>expenses(user_id, spent_at)</code> — requêtes dashboard filtrées par période<br>
+        <code>expenses(user_id, category_id)</code> — agrégation par catégorie<br>
+        <code>budgets(user_id, category_id, period)</code> — contrôle de budget en temps réel<br>
+        <code>refresh_tokens(token_hash)</code> — lookup de session à chaque refresh
+      </p>
+    </div>
+
+  </div>
+  <div class="page-footer">Confidentiel — Document d'architecture de haut niveau</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     4. DIAGRAMMES D'ÉTATS
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="s4">
+  <div class="page-header-bar">
+    <span class="left">Architecture Technique — Depense App</span>
+    <span class="right">Version 1.0 · Avril 2026</span>
+  </div>
+  <div class="page-body">
+
+    <h1 class="sec">4. Diagrammes d'états</h1>
+
+    <h2 class="sec">4.1 Cycle de vie d'une dépense récurrente</h2>
+    <p>La gestion des récurrences est pilotée par <strong>Celery beat</strong> (tâche périodique toutes les heures). La transition entre états est le seul automate métier non trivial de l'application.</p>
+
+    <div class="state-diagram">
+      <div class="state-box init" style="margin-bottom:8px">⬜ INITIALE — Utilisateur crée une dépense avec récurrence</div>
+      <div class="state-arrow">▼ &nbsp;→ next_due_at calculée selon la fréquence choisie</div>
+      <div class="state-box active" style="margin-bottom:8px">✅ ACTIVE — next_due_at = date de prochaine occurrence</div>
+      <div class="state-arrow">▼ &nbsp;Celery beat atteint next_due_at → génère une expense + recalcule next_due_at</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:520px;margin:0 auto 8px">
+        <div>
+          <div class="state-arrow">▼ Utilisateur suspend manuellement</div>
+          <div class="state-box paused">⏸ SUSPENDUE</div>
+          <div class="state-arrow">↕ Réactivation possible</div>
+        </div>
+        <div>
+          <div class="state-arrow">▼ ends_at atteinte</div>
+          <div class="state-box ended">🏁 TERMINÉE</div>
+          <div class="state-arrow">État final non réversible</div>
+        </div>
+      </div>
+      <div class="state-arrow">▼ Suppression soft (is_active = false)</div>
+      <div class="state-box ended" style="max-width:260px">🗑 SUPPRIMÉE — état final</div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Règle métier : modification d'une série</div>
+      <p>Lors de la modification ou suppression d'une dépense récurrente, l'utilisateur choisit entre :<br>
+      <strong>(a)</strong> modifier/supprimer uniquement l'occurrence sélectionnée — la dépense est détachée de la série (recurrence_id → NULL)<br>
+      <strong>(b)</strong> modifier/supprimer toute la série — la recurrence est mise à jour / is_active = false</p>
+    </div>
+
+    <h2 class="sec">4.2 Cycle de vie d'une session utilisateur</h2>
+
+<pre>ANONYME ──[POST /auth/login — credentials OK]──────► AUTHENTIFIÉ
+                                                        (access_token RS256, TTL 15 min)
+         └─[credentials KO, 5 tentatives]──────► BLOQUÉ (lockout Redis, TTL 15 min)
+
+AUTHENTIFIÉ ──[access_token expiré]──► RAFRAÎCHISSEMENT
+                  ├─[refresh_token valide]──► AUTHENTIFIÉ (nouveau access_token)
+                  └─[refresh_token expiré / révoqué]──► ANONYME
+
+AUTHENTIFIÉ ──[POST /auth/logout]──► ANONYME
+                  └─ refresh_token.revoked_at = NOW() en base
+                  └─ client efface l'access_token de la mémoire</pre>
+
+    <h2 class="sec">4.3 Cycle de vie d'une alerte budget</h2>
+<pre>SOUS LE SEUIL ──[dépense ajoutée, cumul ≥ 80% du budget]──► ALERTE 80%
+                  └─ Celery task : send_budget_alert_email (seuil: "attention")
+
+ALERTE 80% ──[dépense ajoutée, cumul ≥ 100%]──► DÉPASSEMENT
+                  └─ Celery task : send_budget_alert_email (seuil: "dépassement")
+
+DÉPASSEMENT ──[nouvelle période / budget réinitialisé]──► SOUS LE SEUIL
+             └─[utilisateur augmente le budget]──────────► SOUS LE SEUIL</pre>
+
+  </div>
+  <div class="page-footer">Confidentiel — Document d'architecture de haut niveau</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     5. CHOIX TECHNIQUES JUSTIFIÉS
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="s5">
+  <div class="page-header-bar">
+    <span class="left">Architecture Technique — Depense App</span>
+    <span class="right">Version 1.0 · Avril 2026</span>
+  </div>
+  <div class="page-body">
+
+    <h1 class="sec">5. Choix techniques justifiés</h1>
+
+    <table class="doc">
+      <thead><tr><th>Composant</th><th>Choix retenu</th><th>Alternative écartée</th><th>Justification</th></tr></thead>
+      <tbody>
+        <tr><td class="key">Frontend</td><td class="mono">React 18</td><td class="muted">Vue 3 / Svelte</td><td>Écosystème mature, React Query pour le state serveur, large vivier de développeurs.</td></tr>
+        <tr><td class="key">State management</td><td class="mono">React Query</td><td class="muted">Redux / Zustand</td><td>Le state applicatif est principalement du state serveur. React Query couvre 90% du besoin sans boilerplate (cache, invalidation, deduplication).</td></tr>
+        <tr><td class="key">Backend</td><td class="mono">FastAPI</td><td class="muted">Django REST / Flask</td><td>Async natif (asyncpg), validation Pydantic automatique, OpenAPI généré sans effort, typage strict Python 3.12.</td></tr>
+        <tr><td class="key">Base de données</td><td class="mono">PostgreSQL 16</td><td class="muted">MySQL / SQLite</td><td>ACID, support JSON natif, window functions pour les agrégations analytiques, uuid_generate_v4, extensions robustes.</td></tr>
+        <tr><td class="key">ORM</td><td class="mono">SQLAlchemy 2 async</td><td class="muted">Tortoise / Peewee</td><td>Standard Python, support async (AsyncSession), Alembic pour les migrations versionées, maturité éprouvée.</td></tr>
+        <tr><td class="key">Cache / Queue</td><td class="mono">Redis 7</td><td class="muted">RabbitMQ + Memcached</td><td>Un seul service pour le broker Celery ET le cache applicatif. Réduit la complexité opérationnelle de Docker Compose.</td></tr>
+        <tr><td class="key">Tâches async</td><td class="mono">Celery</td><td class="muted">ARQ / Dramatiq</td><td>Maturité, intégration FastAPI bien documentée, support des tâches périodiques (celery beat) pour les récurrences.</td></tr>
+        <tr><td class="key">Auth</td><td class="mono">JWT RS256</td><td class="muted">Sessions / Auth0</td><td>Stateless, compatible future app mobile. RS256 (clé asymétrique) : la clé publique peut être distribuée sans exposer la clé de signature.</td></tr>
+        <tr><td class="key">Reverse proxy</td><td class="mono">Nginx</td><td class="muted">Traefik / Caddy</td><td>Contrôle fin du rate limiting et des headers sécurité, configuration déclarative simple, image Alpine légère.</td></tr>
+        <tr><td class="key">Taux de change</td><td class="mono">Frankfurter API</td><td class="muted">Open Exchange Rates</td><td>Gratuit, sans clé API, basé sur les données officielles de la BCE. Résultat mis en cache Redis 1h pour limiter les appels externes.</td></tr>
+        <tr><td class="key">Envoi e-mail</td><td class="mono">smtplib + Jinja2</td><td class="muted">SendGrid / Mailgun</td><td>Pas de dépendance externe en dev. En production : variable SMTP_HOST pointe vers un relay managé (SES, Mailgun, etc.).</td></tr>
+        <tr><td class="key">Export PDF</td><td class="mono">Client-side browser</td><td class="muted">Playwright / WeasyPrint</td><td>Pas de dépendance serveur. CSS @media print pour les rapports simples ; jsPDF + html2canvas pour inclure les graphiques Recharts.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">5.1 Décisions sécurité</h2>
+    <table class="doc">
+      <thead><tr><th>Domaine</th><th>Décision retenue</th></tr></thead>
+      <tbody>
+        <tr><td class="key">Mots de passe</td><td>Hachage bcrypt, cost factor 12. Jamais stocké en clair, jamais journalisé dans les logs.</td></tr>
+        <tr><td class="key">Tokens JWT</td><td>RS256 asymétrique. access_token en mémoire JS (non persisté), refresh_token en cookie HttpOnly Secure SameSite=Strict.</td></tr>
+        <tr><td class="key">Isolation données</td><td>user_id systématiquement injecté depuis le token JWT par le middleware FastAPI — jamais depuis le body de la requête.</td></tr>
+        <tr><td class="key">Rate limiting</td><td>Nginx : 10 req/s par IP sur /api/v1/auth/*. 100 req/s sur les autres endpoints API.</td></tr>
+        <tr><td class="key">Headers sécurité</td><td>HSTS, X-Frame-Options: DENY, CSP strict, X-Content-Type-Options: nosniff — configurés dans nginx.conf.</td></tr>
+        <tr><td class="key">CORS</td><td>Origin whitelist stricte en production. Aucun wildcard (*). Préflight OPTIONS géré par Nginx.</td></tr>
+        <tr><td class="key">Brute force</td><td>Lockout 15 min après 5 échecs de login consécutifs. Compteur stocké dans Redis (TTL 15 min, clé par IP + email).</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">5.2 Structure des répertoires</h2>
+<pre>depense/
+├── docker-compose.yml
+├── docker-compose.prod.yml
+├── nginx/
+│   └── nginx.conf
+├── frontend/                    Vite 5 + React 18
+│   └── src/
+│       ├── api/                 clients Axios par domaine (expenses, dashboard…)
+│       ├── components/          composants UI atomiques
+│       ├── pages/               vues (Dashboard, Expenses, Categories…)
+│       └── hooks/               useExpenses, useDashboard, useCategories…
+└── backend/                     FastAPI
+    ├── app/
+    │   ├── api/v1/              routers FastAPI (expenses, auth, dashboard…)
+    │   ├── models/              modèles SQLAlchemy
+    │   ├── schemas/             schémas Pydantic (request / response)
+    │   ├── services/            logique métier (budget_checker, exchange_rate…)
+    │   └── tasks/               tâches Celery (alerts, recurrences…)
+    └── alembic/                 migrations de base de données</pre>
+
+    <div class="callout amber">
+      <div class="callout-title">Points d'attention pour la production</div>
+      <p>
+        <strong>1. Secrets :</strong> utiliser Docker secrets ou un vault (HashiCorp Vault) — pas de secrets en clair dans les variables d'environnement committées.<br><br>
+        <strong>2. Backups PostgreSQL :</strong> pg_dump programmé via cron, chiffré (GPG) et stocké hors du serveur applicatif (S3 ou équivalent).<br><br>
+        <strong>3. Monitoring :</strong> Prometheus + Grafana ou service managé. Alertes sur latence API &gt; 500 ms et taux d'erreur 5xx &gt; 1%.<br><br>
+        <strong>4. Migrations Alembic :</strong> appliquées automatiquement au démarrage du conteneur backend via <code>entrypoint.sh</code> — avec vérification de santé de la base avant démarrage de l'API.
+      </p>
+    </div>
+
+    <div class="section-end">Fin du document — Architecture Technique v1.0 — Depense App</div>
+
+  </div>
+  <div class="page-footer">Confidentiel — Document d'architecture de haut niveau</div>
+</div>
+
+<script>
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
